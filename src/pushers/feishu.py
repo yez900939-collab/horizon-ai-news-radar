@@ -10,7 +10,17 @@ from loguru import logger
 
 from src.config import settings
 from src.fetchers.base import Article
+from src.llm.classifier import classify_by_keywords
 from .base import BasePusher
+
+
+SECURITY_CATEGORIES = {"AI 安全", "漏洞与威胁", "安全研究"}
+SECURITY_SOURCES = {
+    "cisa_advisories",
+    "microsoft_security",
+    "krebsonsecurity",
+    "sans_isc",
+}
 
 
 class FeishuPusher(BasePusher):
@@ -35,33 +45,56 @@ class FeishuPusher(BasePusher):
             logger.warning("FEISHU_WEBHOOK_URL not set, skipping push")
             return False
 
-        payload = self.build_payload(articles)
-        if self.signing_secret:
-            timestamp = int(time.time())
-            payload["timestamp"] = timestamp
-            payload["sign"] = self.generate_signature(
-                self.signing_secret,
-                timestamp,
-            )
+        security_articles = []
+        ai_articles = []
+        for article in articles:
+            target = security_articles if self._is_security(article) else ai_articles
+            target.append(article)
+        digests = [
+            ("AI 精选", ai_articles),
+            ("网络安全精选", security_articles),
+        ]
         timeout = aiohttp.ClientTimeout(total=20)
         async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.post(self.webhook_url, json=payload) as response:
-                response.raise_for_status()
-                result = await response.json()
+            for digest_title, digest_articles in digests:
+                if not digest_articles:
+                    continue
+                payload = self.build_payload(digest_articles, digest_title)
+                if self.signing_secret:
+                    timestamp = int(time.time())
+                    payload["timestamp"] = timestamp
+                    payload["sign"] = self.generate_signature(
+                        self.signing_secret,
+                        timestamp,
+                    )
+                async with session.post(self.webhook_url, json=payload) as response:
+                    response.raise_for_status()
+                    result = await response.json()
 
-        if result.get("code", result.get("StatusCode")) != 0:
-            logger.error(f"Feishu push failed: {result}")
-            raise RuntimeError(
-                f"Feishu webhook rejected the message: "
-                f"code={result.get('code', result.get('StatusCode'))}, "
-                f"msg={result.get('msg', result.get('StatusMessage', 'unknown'))}"
-            )
+                if result.get("code", result.get("StatusCode")) != 0:
+                    logger.error(f"Feishu push failed for {digest_title}: {result}")
+                    raise RuntimeError(
+                        f"Feishu webhook rejected {digest_title}: "
+                        f"code={result.get('code', result.get('StatusCode'))}, "
+                        f"msg={result.get('msg', result.get('StatusMessage', 'unknown'))}"
+                    )
 
-        logger.info(f"Pushed {min(len(articles), 10)} articles to Feishu")
+        logger.info(
+            "Pushed separate Feishu digests: "
+            f"AI={min(len(ai_articles), 10)}, "
+            f"security={min(len(security_articles), 10)}"
+        )
         return True
 
     @staticmethod
-    def build_payload(articles: list[Article]) -> dict:
+    def _is_security(article: Article) -> bool:
+        if article.source in SECURITY_SOURCES:
+            return True
+        category = classify_by_keywords(article.title, article.tags)
+        return category in SECURITY_CATEGORIES
+
+    @staticmethod
+    def build_payload(articles: list[Article], digest_title: str = "AI 精选") -> dict:
         selected = sorted(
             articles,
             key=lambda article: article.importance,
@@ -86,7 +119,7 @@ class FeishuPusher(BasePusher):
             "content": {
                 "post": {
                     "zh_cn": {
-                        "title": f"🪐 Horizon AI 日报 · {today}",
+                        "title": f"🪐 Horizon {digest_title} · {today}",
                         "content": paragraphs,
                     }
                 }
