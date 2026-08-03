@@ -27,10 +27,12 @@ uv run python -m src.main schedule # 定时调度
 | 变量 | 用途 | 必需 |
 | --- | --- | --- |
 | `DEEPSEEK_API_KEY` | DeepSeek 摘要 | 完整流水线必需 |
+| `DEEPSEEK_AI_API_KEY` | AI 专属群使用的独立 DeepSeek 摘要密钥 | 配置 AI 专属群时必需 |
 | `OPENAI_BASE_URL` | OpenAI-compatible API 地址 | 否，默认 DeepSeek |
 | `LLM_MODEL` | 模型名 | 否，默认 `deepseek-v4-flash` |
 | `FEISHU_WEBHOOK_URL` | 飞书群自定义机器人推送 | 否 |
 | `FEISHU_SIGNING_SECRET` | 飞书机器人签名校验密钥 | 启用签名校验时必需 |
+| `FEISHU_AI_WEBHOOK_URL` | 第二个飞书群机器人，仅推送 AI 精选 | 否 |
 
 本地密钥只写入被 Git 忽略的 `.env`。GitHub Actions 部署时，把同名变量写入仓库的
 **Settings → Secrets and variables → Actions**，不要提交到代码。
@@ -41,7 +43,8 @@ uv run python -m src.main schedule # 定时调度
 
 - `data/reports/YYYY-MM-DD.md`：中文日报。
 - `data/raw/YYYY-MM-DD/HHMMSS.json`：未经清洗的原始 RSS/Atom 条目，随日报提交到 GitHub。
-- 飞书富文本消息：分别实时推送「AI 精选 Top 10」和「网络安全精选 Top 10」。
+- 主飞书群：分别实时推送「AI 精选 Top 10」和「网络安全精选 Top 10」。
+- AI 专属飞书群：只实时推送「AI 精选 Top 10」，不会收到网络安全资讯。
 
 ## 结构
 
