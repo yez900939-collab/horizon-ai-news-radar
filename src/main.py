@@ -1,5 +1,6 @@
 import asyncio
 import sys
+from copy import deepcopy
 from loguru import logger
 from src.config import settings
 from src.fetchers.rss import RSSFetcher
@@ -58,6 +59,24 @@ async def run_pipeline():
     # 5. Push to configured channels
     if settings.feishu_webhook_url:
         await FeishuPusher().push(clean_articles)
+    if settings.feishu_ai_webhook_url:
+        ai_articles = [
+            deepcopy(article)
+            for article in clean_articles
+            if not FeishuPusher.is_security(article)
+        ]
+        ai_summarizer = LLMSummarizer(api_key=settings.deepseek_ai_api_key)
+        for article in ai_articles[:settings.max_articles_per_fetch]:
+            result = await ai_summarizer.summarize(article)
+            if result:
+                article.summary = result.get("summary", "")
+                article.tags = result.get("tags", [])
+                article.importance = result.get("importance", 3)
+        await FeishuPusher(
+            webhook_url=settings.feishu_ai_webhook_url,
+            signing_secret=None,
+            include_security=False,
+        ).push(ai_articles)
 
     logger.info(f"=== Pipeline done: {len(clean_articles)} articles processed ===")
     return clean_articles

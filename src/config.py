@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     # OpenAI-compatible LLM
     openai_api_key: str = ""
     deepseek_api_key: str = ""
+    deepseek_ai_api_key: str = ""
     openai_base_url: str = "https://api.deepseek.com"
     llm_model: str = "deepseek-v4-flash"
 
@@ -13,6 +14,7 @@ class Settings(BaseSettings):
     wecom_webhook_url: Optional[str] = None
     feishu_webhook_url: Optional[str] = None
     feishu_signing_secret: Optional[str] = None
+    feishu_ai_webhook_url: Optional[str] = None
 
     # Behavior
     max_articles_per_fetch: int = 50
