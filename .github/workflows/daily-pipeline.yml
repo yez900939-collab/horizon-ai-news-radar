@@ -13,6 +13,7 @@ env:
   OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL || 'https://api.deepseek.com' }}
   LLM_MODEL: ${{ secrets.LLM_MODEL || 'deepseek-v4-flash' }}
   FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+  FEISHU_SIGNING_SECRET: ${{ secrets.FEISHU_SIGNING_SECRET }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
