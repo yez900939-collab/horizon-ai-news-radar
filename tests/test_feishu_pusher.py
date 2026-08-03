@@ -9,10 +9,12 @@ from src.pushers.feishu import FeishuPusher
 class FeishuPusherTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.received_payload = None
+        self.received_payloads = []
         self.response_payload = {"code": 0, "msg": "success"}
 
         async def handle(request):
             self.received_payload = await request.json()
+            self.received_payloads.append(self.received_payload)
             return web.json_response(self.response_payload)
 
         app = web.Application()
@@ -47,7 +49,7 @@ class FeishuPusherTests(unittest.IsolatedAsyncioTestCase):
             pusher.generate_signature("demo", timestamp),
         )
         zh_cn = self.received_payload["content"]["post"]["zh_cn"]
-        self.assertIn("Horizon AI", zh_cn["title"])
+        self.assertIn("Horizon 网络安全精选", zh_cn["title"])
         self.assertEqual(zh_cn["content"][1][0]["tag"], "a")
         self.assertEqual(zh_cn["content"][1][0]["href"], article.url)
 
@@ -64,9 +66,44 @@ class FeishuPusherTests(unittest.IsolatedAsyncioTestCase):
             "code": 19021,
             "msg": "sign match fail",
         }
+        article = Article(
+            title="New reasoning model launch",
+            url="https://example.com/ai",
+            source="ai-lab",
+            summary="新推理模型发布。",
+            importance=5,
+        )
 
         with self.assertRaisesRegex(RuntimeError, "19021"):
-            await FeishuPusher(self.webhook_url).push([])
+            await FeishuPusher(self.webhook_url).push([article])
+
+    async def test_pushes_ai_and_cybersecurity_as_separate_digests(self):
+        articles = [
+            Article(
+                title="New reasoning model launch",
+                url="https://example.com/ai",
+                source="ai-lab",
+                summary="新推理模型发布。",
+                importance=5,
+            ),
+            Article(
+                title="CVE-2026-1234 critical RCE vulnerability",
+                url="https://example.com/cve",
+                source="security-feed",
+                summary="关键远程代码执行漏洞。",
+                importance=5,
+            ),
+        ]
+
+        await FeishuPusher(self.webhook_url).push(articles)
+
+        self.assertEqual(len(self.received_payloads), 2)
+        titles = [
+            payload["content"]["post"]["zh_cn"]["title"]
+            for payload in self.received_payloads
+        ]
+        self.assertTrue(any("AI 精选" in title for title in titles))
+        self.assertTrue(any("网络安全精选" in title for title in titles))
 
 
 if __name__ == "__main__":
