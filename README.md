@@ -41,7 +41,7 @@ uv run python -m src.main schedule # 定时调度
 
 - `data/reports/YYYY-MM-DD.md`：中文日报。
 - `data/raw/YYYY-MM-DD/HHMMSS.json`：未经清洗的原始 RSS/Atom 条目，随日报提交到 GitHub。
-- 飞书富文本消息：实时推送优先级最高的 10 条资讯。
+- 飞书富文本消息：分别实时推送「AI 精选 Top 10」和「网络安全精选 Top 10」。
 
 ## 结构
 
