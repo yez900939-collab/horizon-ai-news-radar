@@ -1,3 +1,7 @@
+import base64
+import hashlib
+import hmac
+import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -12,8 +16,19 @@ from .base import BasePusher
 class FeishuPusher(BasePusher):
     """Push the selected daily digest through a Feishu custom-bot webhook."""
 
-    def __init__(self, webhook_url: str | None = None):
+    def __init__(
+        self,
+        webhook_url: str | None = None,
+        signing_secret: str | None = None,
+    ):
         self.webhook_url = webhook_url or settings.feishu_webhook_url
+        self.signing_secret = signing_secret or settings.feishu_signing_secret
+
+    @staticmethod
+    def generate_signature(secret: str, timestamp: int) -> str:
+        signing_key = f"{timestamp}\n{secret}".encode("utf-8")
+        digest = hmac.new(signing_key, digestmod=hashlib.sha256).digest()
+        return base64.b64encode(digest).decode("utf-8")
 
     async def push(self, articles: list[Article]) -> bool:
         if not self.webhook_url:
@@ -21,6 +36,13 @@ class FeishuPusher(BasePusher):
             return False
 
         payload = self.build_payload(articles)
+        if self.signing_secret:
+            timestamp = int(time.time())
+            payload["timestamp"] = timestamp
+            payload["sign"] = self.generate_signature(
+                self.signing_secret,
+                timestamp,
+            )
         timeout = aiohttp.ClientTimeout(total=20)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.post(self.webhook_url, json=payload) as response:
@@ -29,7 +51,11 @@ class FeishuPusher(BasePusher):
 
         if result.get("code", result.get("StatusCode")) != 0:
             logger.error(f"Feishu push failed: {result}")
-            return False
+            raise RuntimeError(
+                f"Feishu webhook rejected the message: "
+                f"code={result.get('code', result.get('StatusCode'))}, "
+                f"msg={result.get('msg', result.get('StatusMessage', 'unknown'))}"
+            )
 
         logger.info(f"Pushed {min(len(articles), 10)} articles to Feishu")
         return True
