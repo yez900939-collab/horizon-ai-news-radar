@@ -30,6 +30,7 @@ uv run python -m src.main schedule # 定时调度
 | `OPENAI_BASE_URL` | OpenAI-compatible API 地址 | 否，默认 DeepSeek |
 | `LLM_MODEL` | 模型名 | 否，默认 `deepseek-v4-flash` |
 | `FEISHU_WEBHOOK_URL` | 飞书群自定义机器人推送 | 否 |
+| `FEISHU_SIGNING_SECRET` | 飞书机器人签名校验密钥 | 启用签名校验时必需 |
 
 本地密钥只写入被 Git 忽略的 `.env`。GitHub Actions 部署时，把同名变量写入仓库的
 **Settings → Secrets and variables → Actions**，不要提交到代码。
