@@ -12,8 +12,7 @@ class WeComPusher(BasePusher):
         if not settings.wecom_webhook_url:
             logger.warning("WECOM_WEBHOOK_URL not set, skipping push")
             return False
-        content = "
-".join(
+        content = "\n\n".join(
             f"**{a.title}**\n{a.summary or '暂无摘要'}\n[查看原文]({a.url})"
             for a in articles[:5]
         )
