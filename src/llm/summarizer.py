@@ -15,11 +15,12 @@ SYSTEM_PROMPT = """你是一名专注 AI 与网络安全的中文情报编辑。
 
 
 class LLMSummarizer:
-    def __init__(self):
-        if not settings.llm_api_key:
+    def __init__(self, api_key: str | None = None):
+        resolved_api_key = settings.llm_api_key if api_key is None else api_key
+        if not resolved_api_key:
             raise ValueError("DEEPSEEK_API_KEY or OPENAI_API_KEY is required")
         self.client = AsyncOpenAI(
-            api_key=settings.llm_api_key,
+            api_key=resolved_api_key,
             base_url=settings.openai_base_url,
         )
 
