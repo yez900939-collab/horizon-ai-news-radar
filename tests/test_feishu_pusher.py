@@ -105,6 +105,32 @@ class FeishuPusherTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(any("AI 精选" in title for title in titles))
         self.assertTrue(any("网络安全精选" in title for title in titles))
 
+    async def test_ai_only_channel_excludes_cybersecurity_digest(self):
+        articles = [
+            Article(
+                title="New reasoning model launch",
+                url="https://example.com/ai",
+                source="ai-lab",
+                summary="新推理模型发布。",
+                importance=5,
+            ),
+            Article(
+                title="CVE-2026-1234 critical RCE vulnerability",
+                url="https://example.com/cve",
+                source="security-feed",
+                summary="关键远程代码执行漏洞。",
+                importance=5,
+            ),
+        ]
+
+        await FeishuPusher(self.webhook_url, include_security=False).push(articles)
+
+        self.assertEqual(len(self.received_payloads), 1)
+        title = self.received_payloads[0]["content"]["post"]["zh_cn"]["title"]
+        self.assertIn("AI 精选", title)
+        self.assertNotIn("网络安全", title)
+        self.assertNotIn("sign", self.received_payloads[0])
+
 
 if __name__ == "__main__":
     unittest.main()
