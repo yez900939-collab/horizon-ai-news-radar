@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     # Push channels
     wecom_webhook_url: Optional[str] = None
     feishu_webhook_url: Optional[str] = None
+    feishu_signing_secret: Optional[str] = None
 
     # Behavior
     max_articles_per_fetch: int = 50
