@@ -30,9 +30,15 @@ class FeishuPusher(BasePusher):
         self,
         webhook_url: str | None = None,
         signing_secret: str | None = None,
+        include_security: bool = True,
     ):
         self.webhook_url = webhook_url or settings.feishu_webhook_url
-        self.signing_secret = signing_secret or settings.feishu_signing_secret
+        self.signing_secret = (
+            settings.feishu_signing_secret
+            if webhook_url is None and signing_secret is None
+            else signing_secret
+        )
+        self.include_security = include_security
 
     @staticmethod
     def generate_signature(secret: str, timestamp: int) -> str:
@@ -48,12 +54,13 @@ class FeishuPusher(BasePusher):
         security_articles = []
         ai_articles = []
         for article in articles:
-            target = security_articles if self._is_security(article) else ai_articles
+            target = security_articles if self.is_security(article) else ai_articles
             target.append(article)
         digests = [
             ("AI 精选", ai_articles),
-            ("网络安全精选", security_articles),
         ]
+        if self.include_security:
+            digests.append(("网络安全精选", security_articles))
         timeout = aiohttp.ClientTimeout(total=20)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             for digest_title, digest_articles in digests:
@@ -80,14 +87,14 @@ class FeishuPusher(BasePusher):
                     )
 
         logger.info(
-            "Pushed separate Feishu digests: "
+            "Pushed Feishu digests: "
             f"AI={min(len(ai_articles), 10)}, "
-            f"security={min(len(security_articles), 10)}"
+            f"security={min(len(security_articles), 10) if self.include_security else 'disabled'}"
         )
         return True
 
     @staticmethod
-    def _is_security(article: Article) -> bool:
+    def is_security(article: Article) -> bool:
         if article.source in SECURITY_SOURCES:
             return True
         category = classify_by_keywords(article.title, article.tags)
