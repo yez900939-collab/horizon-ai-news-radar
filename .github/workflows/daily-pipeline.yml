@@ -10,10 +10,12 @@ permissions:
 
 env:
   DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+  DEEPSEEK_AI_API_KEY: ${{ secrets.DEEPSEEK_AI_API_KEY }}
   OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL || 'https://api.deepseek.com' }}
   LLM_MODEL: ${{ secrets.LLM_MODEL || 'deepseek-v4-flash' }}
   FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
   FEISHU_SIGNING_SECRET: ${{ secrets.FEISHU_SIGNING_SECRET }}
+  FEISHU_AI_WEBHOOK_URL: ${{ secrets.FEISHU_AI_WEBHOOK_URL }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
